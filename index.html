@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>自助问答 - 智慧机场自助服务系统</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://www.layuicdn.com/layui/css/layui.css">
+    <link rel="stylesheet" href="{{url_for('static',filename='./res/static/css/main.css')}}">
+    <link rel="shortcut icon" href="{{url_for('static',filename='./res/static/images/flight_icon.png') }}">
+    <style>
+        #question_table{
+            padding: 10px 30px 10px 30px;
+            /*padding-bottom: 10px;*/
+        }
+        #question{
+            padding: 30px 30px 30px 30px;
+            line-height: normal;
+        }
+        #myinput, #myques{
+            font-size: medium;
+            width: 250px;
+        }
+        #btn-start-recording{
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body class="lay-blog">
+<div class="header">
+    <!--<img src='/res/static/images/1.jpg'></img>-->
+    <div class="header-wrap" onclick="javascript:location.href='/'">
+        <h1 class="logo pull-left">
+            <font size="6" color="white">智慧机场
+                <font size="5" color="white">自助服务系统</font>
+            </font>
+        </h1>
+    </div>
+</div>
+
+<div class="container-wrap">
+    <div class="container">
+        <div class="contar-wrap">
+            <div class="item" align="center">
+
+                <div class="layui-row">
+                    <div class="layui-col-md5" align='left'>
+                        <br>
+                            <form class="layui-form layui-form-pane" action="" id="input_test" onsubmit="return false;">
+                                <!--<label class="layui-form-label" id="myques">问题</label>-->
+                                <div class="layui-input-inline" id="myinput">
+                                    <input id="answer" type="text" placeholder="请输入待查询问题..." class="layui-input">
+                                </div>
+                                <!--recoder-->
+                                <button type="button" class="layui-btn layui-btn-normal" id="btn-start-recording" style="display: inline" onclick="begin()"><i class="layui-icon">&#xe688;</i></button>
+                                <button type="button" class="layui-btn layui-btn-normal" id="btn-stop-recording" style="display: none" onclick="stop()"><i class="layui-icon">&#x1006;</i></button>
+
+
+                                <a type="button" class="layui-btn layui-btn-danger" href="/"><i class="layui-icon">&#xe68e;</i></a>
+
+                                <!--writer-->
+                                <br>
+                                <br>
+                                <button type="button" class="layui-btn" id="get_ques" onclick="get_question()">查询答案</button>
+                                <button type="reset" class="layui-btn layui-btn-primary">清空问题</button>
+
+                            <!--<audio controls="" style="visibility: hidden"></audio>-->
+
+                        </form>
+                        <br>
+                    </div>
+                </div>
+                <br>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="contar-wrap">
+            <div class="item" align="center">
+            <form class="layui-form layui-form-pane" id="question_table" action="">
+                <div class="layui-form-item layui-form-text">
+                    <label class="layui-form-label" id="answer_show"></label>
+                    <div class="layui-input-block">
+                        <textarea id="question" placeholder="欢迎来到智慧机场自助问答系统！直接输入问题或点击蓝色按钮语音输入！" class="layui-textarea" readonly></textarea>
+                    </div>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="footer">
+    <p>
+				<span>&copy; 2018-2019 智慧机场自助服务系统</span>
+    </p>
+</div>
+
+
+<script src="https://www.layuicdn.com/layui/layui.js" charset="utf-8"></script>
+<script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+<script src="recorder.js"></script>
+
+<script>
+    //<form>加上onsubmit="return false;" 这里加上监听 回车事件
+document.onkeydown = function (e) { // 回车提交表单
+// 兼容FF和IE和Opera
+    var theEvent = window.event || e;
+    var code = theEvent.keyCode || theEvent.which || theEvent.charCode;
+    if (code == 13) {
+       $("#get_ques").click();;
+    }
+}
+</script>
+
+<script>
+    function get_qa_api(answer) {
+        /**
+         * 调用api根据answer(str)返回答案并显示
+         */
+        var httpRequest = new XMLHttpRequest();//第一步：建立所需的对象
+        var url = '/api/qa?answer='+answer;
+        httpRequest.open('GET', url, true);//第二步：打开连接  将请求参数写在url中
+        httpRequest.send();//第三步：发送请求  将请求参数写在URL中
+        // 获取处理后的数据
+        httpRequest.onreadystatechange = function () {
+            var json = httpRequest.responseText;//获取到json字符串，还需解析
+            var result = JSON.parse(json);
+            document.getElementById("question").innerHTML = "问题："+ answer +"\n\n答案："+result['result'];
+//            document.getElementById("answer_show").innerHTML = "问题："+ answer +"\n 答案："+result['result'];
+
+        }
+    }
+    function get_question() {
+        /**
+         * 输入问题后调用的函数
+         */
+        var answer = document.getElementById('answer').value;
+//        console.log(answer)
+        get_qa_api(answer)
+
+    }
+</script>
+
+<script>
+function create_recoder() {
+        //alert("创建recoder");
+        let recorder = new Recorder({
+        sampleBits: 16,         // 采样位数，支持 8 或 16，默认是16
+        sampleRate: 16000,      // 采样率，支持 11025、16000、22050、24000、44100、48000，根据浏览器默认值，我的chrome是48000
+        numChannels: 1,         // 声道，支持 1 或 2， 默认是1
+        compiling: false       // 是否边录边转换，默认是false
+    });
+    //alert("创建recoder完毕");
+    return recorder
+}
+</script>
+
+
+<script>
+//    alert("创建recoder");
+//    let recorder = new Recorder({
+//        sampleBits: 16,         // 采样位数，支持 8 或 16，默认是16
+//        sampleRate: 16000,      // 采样率，支持 11025、16000、22050、24000、44100、48000，根据浏览器默认值，我的chrome是48000
+//        numChannels: 1,         // 声道，支持 1 或 2， 默认是1
+//        compiling: false       // 是否边录边转换，默认是false
+//    });
+//    alert("创建recoder完毕");
+    let recorder = create_recoder();
+    // javascript function that uploads a blob to upload.php
+    function uploadBlob(blob){
+        // create a blob here for testing
+        var fd = new FormData();
+        fd.append('audio_file', blob);
+        $.ajax({
+            type: 'POST',
+            url: '/api/upload',
+            data: fd,
+            processData: false,
+            contentType: false
+        }).done(function(data) {
+            console.log(data);
+            document.getElementById("answer").value = data;
+            get_qa_api(data);
+            // 销毁录音实例，置为null释放资源，fn为回调函数，
+            recorder.destroy().then(function() {
+                recorder = null;
+            });
+        });
+    }
+
+    function begin() {
+        document.getElementById("btn-start-recording").style.display="none";
+        document.getElementById("btn-stop-recording").style.display="inline";
+        recorder = create_recoder();
+        //alert('开始录音');
+        recorder.start().then(() => {
+            // 开始录音
+            console.log("recording...")
+        }, (error) => {
+            // 出错了
+            console.log(`${error.name} : ${error.message}`);
+        });
+    }
+
+    function stop() {
+        document.getElementById("btn-start-recording").style.display="inline";
+        document.getElementById("btn-stop-recording").style.display="none";
+        //alert('停止录音');
+        //recorder.stop();
+        recorder.stop();
+        //recorder.play();
+        var blob = recorder.getPCMBlob();
+//        alert(blob);
+        //var url = URL.createObjectURL(blob);
+        //alert(url);
+//        alert(blob.size);
+        if(blob.size<3*1024*1024){
+            uploadBlob(blob);
+            //alert(res);
+            //get_qa_api(res)
+        }
+        else {
+            document.getElementById("question").innerHTML = "语音时间超过60s...";
+        }
+//        create_recoder()
+        //history.go(0);
+    }
+</script>
+
+</body>
+</html>
